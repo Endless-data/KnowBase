@@ -1,0 +1,23 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: knowbase-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: knowbase
+      MYSQL_USER: knowbase
+      MYSQL_PASSWORD: knowbase
+      MYSQL_ROOT_PASSWORD: knowbase_root
+      TZ: Asia/Shanghai
+    ports:
+      - "3306:3306"
+    volumes:
+      - knowbase_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u knowbase -pknowbase"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  knowbase_mysql_data:
