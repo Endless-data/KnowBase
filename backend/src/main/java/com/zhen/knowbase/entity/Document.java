@@ -52,6 +52,14 @@ public class Document {
         this.fileSize = fileSize;
     }
 
+    public void markParsing() {
+        this.status = DocumentStatus.PARSING;
+    }
+
+    public void markFailed() {
+        this.status = DocumentStatus.FAILED;
+    }
+
     @PrePersist
     void prePersist() {
         LocalDateTime now = LocalDateTime.now();
