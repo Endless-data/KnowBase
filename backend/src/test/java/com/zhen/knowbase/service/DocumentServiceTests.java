@@ -17,14 +17,16 @@ class DocumentServiceTests {
     private final DocumentRepository documentRepository = mock(DocumentRepository.class);
     private final FileStorageService fileStorageService = mock(FileStorageService.class);
     private final ParserService parserService = mock(ParserService.class);
+    private final ChunkService chunkService = mock(ChunkService.class);
     private final DocumentService documentService = new DocumentService(
             documentRepository,
             fileStorageService,
-            parserService
+            parserService,
+            chunkService
     );
 
     @Test
-    void marksUploadedDocumentAsParsingWhenParseSucceeds() {
+    void marksUploadedDocumentAsIndexedWhenParseAndChunkSucceed() {
         MockMultipartFile file = new MockMultipartFile("file", "note.md", "text/markdown", "# title".getBytes());
         when(fileStorageService.store(file)).thenReturn(new StoredFile("note.md", "md", "/tmp/note.md", 7L));
         when(documentRepository.save(any(Document.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -33,7 +35,7 @@ class DocumentServiceTests {
         DocumentUploadResponse response = documentService.uploadDocument(file);
 
         assertThat(response.name()).isEqualTo("note.md");
-        assertThat(response.status()).isEqualTo("PARSING");
+        assertThat(response.status()).isEqualTo("INDEXED");
     }
 
     @Test

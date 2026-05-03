@@ -18,15 +18,18 @@ public class DocumentService {
     private final DocumentRepository documentRepository;
     private final FileStorageService fileStorageService;
     private final ParserService parserService;
+    private final ChunkService chunkService;
 
     public DocumentService(
             DocumentRepository documentRepository,
             FileStorageService fileStorageService,
-            ParserService parserService
+            ParserService parserService,
+            ChunkService chunkService
     ) {
         this.documentRepository = documentRepository;
         this.fileStorageService = fileStorageService;
         this.parserService = parserService;
+        this.chunkService = chunkService;
     }
 
     @Transactional(readOnly = true)
@@ -55,8 +58,9 @@ public class DocumentService {
 
     private void parseUploadedDocument(Document document) {
         try {
-            parserService.parse(document.getFilePath());
-            document.markParsing();
+            String content = parserService.parse(document.getFilePath());
+            chunkService.createChunks(document, content);
+            document.markIndexed();
         } catch (IllegalArgumentException | UncheckedIOException exception) {
             document.markFailed();
         }

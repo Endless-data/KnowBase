@@ -60,6 +60,10 @@ public class Document {
         this.status = DocumentStatus.FAILED;
     }
 
+    public void markIndexed() {
+        this.status = DocumentStatus.INDEXED;
+    }
+
     @PrePersist
     void prePersist() {
         LocalDateTime now = LocalDateTime.now();

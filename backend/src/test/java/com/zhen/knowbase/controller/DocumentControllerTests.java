@@ -53,7 +53,7 @@ class DocumentControllerTests {
                 "# KnowBase".getBytes()
         );
         when(documentService.uploadDocument(file)).thenReturn(
-                new DocumentUploadResponse(1L, "README.md", "PARSING")
+                new DocumentUploadResponse(1L, "README.md", "INDEXED")
         );
 
         mockMvc.perform(multipart("/api/documents/upload").file(file))
@@ -62,6 +62,6 @@ class DocumentControllerTests {
                 .andExpect(jsonPath("$.message").value("上传成功"))
                 .andExpect(jsonPath("$.data.documentId").value(1))
                 .andExpect(jsonPath("$.data.name").value("README.md"))
-                .andExpect(jsonPath("$.data.status").value("PARSING"));
+                .andExpect(jsonPath("$.data.status").value("INDEXED"));
     }
 }
