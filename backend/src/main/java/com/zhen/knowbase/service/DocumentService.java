@@ -56,6 +56,16 @@ public class DocumentService {
         return DocumentUploadResponse.from(savedDocument);
     }
 
+    @Transactional
+    public void deleteDocument(Long id) {
+        Document document = documentRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Document not found"));
+
+        chunkService.deleteChunksByDocumentId(id);
+        documentRepository.delete(document);
+        fileStorageService.deleteStoredFile(document.getFilePath());
+    }
+
     private void parseUploadedDocument(Document document) {
         try {
             String content = parserService.parse(document.getFilePath());

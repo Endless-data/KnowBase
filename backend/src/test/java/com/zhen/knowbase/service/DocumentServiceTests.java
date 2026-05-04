@@ -2,14 +2,18 @@ package com.zhen.knowbase.service;
 
 import com.zhen.knowbase.dto.DocumentUploadResponse;
 import com.zhen.knowbase.entity.Document;
+import com.zhen.knowbase.entity.DocumentStatus;
 import com.zhen.knowbase.repository.DocumentRepository;
 import com.zhen.knowbase.service.FileStorageService.StoredFile;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockMultipartFile;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class DocumentServiceTests {
@@ -50,5 +54,26 @@ class DocumentServiceTests {
 
         assertThat(response.name()).isEqualTo("empty.txt");
         assertThat(response.status()).isEqualTo("FAILED");
+    }
+
+    @Test
+    void deletesDocumentChunksRecordAndStoredFile() {
+        Document document = new Document("note.md", "md", "/tmp/note.md", DocumentStatus.INDEXED, 7L);
+        when(documentRepository.findById(1L)).thenReturn(Optional.of(document));
+
+        documentService.deleteDocument(1L);
+
+        verify(chunkService).deleteChunksByDocumentId(1L);
+        verify(documentRepository).delete(document);
+        verify(fileStorageService).deleteStoredFile("/tmp/note.md");
+    }
+
+    @Test
+    void rejectsDeletingMissingDocument() {
+        when(documentRepository.findById(404L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> documentService.deleteDocument(404L))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Document not found");
     }
 }

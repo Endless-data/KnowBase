@@ -13,6 +13,7 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -63,5 +64,14 @@ class DocumentControllerTests {
                 .andExpect(jsonPath("$.data.documentId").value(1))
                 .andExpect(jsonPath("$.data.name").value("README.md"))
                 .andExpect(jsonPath("$.data.status").value("INDEXED"));
+    }
+
+    @Test
+    void deletesDocumentWithUnifiedResponse() throws Exception {
+        mockMvc.perform(delete("/api/documents/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.message").value("删除成功"))
+                .andExpect(jsonPath("$.data").doesNotExist());
     }
 }

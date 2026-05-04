@@ -27,6 +27,10 @@ public class ChunkService {
         return chunkRepository.saveAll(chunks);
     }
 
+    public void deleteChunksByDocumentId(Long documentId) {
+        chunkRepository.deleteByDocumentId(documentId);
+    }
+
     private List<Chunk> split(Document document, String content) {
         List<Chunk> chunks = new ArrayList<>();
         int chunkIndex = 0;

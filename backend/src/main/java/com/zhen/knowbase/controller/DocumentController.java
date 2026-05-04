@@ -5,7 +5,9 @@ import com.zhen.knowbase.dto.DocumentResponse;
 import com.zhen.knowbase.dto.DocumentUploadResponse;
 import com.zhen.knowbase.service.DocumentService;
 import java.util.List;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -30,5 +32,11 @@ public class DocumentController {
     @PostMapping("/upload")
     public ApiResponse<DocumentUploadResponse> uploadDocument(@RequestParam("file") MultipartFile file) {
         return ApiResponse.success("上传成功", documentService.uploadDocument(file));
+    }
+
+    @DeleteMapping("/{id}")
+    public ApiResponse<Void> deleteDocument(@PathVariable Long id) {
+        documentService.deleteDocument(id);
+        return ApiResponse.success("删除成功", null);
     }
 }

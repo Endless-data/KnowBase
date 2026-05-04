@@ -11,6 +11,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class ChunkServiceTests {
@@ -45,5 +46,12 @@ class ChunkServiceTests {
         assertThatThrownBy(() -> chunkService.createChunks(document, " "))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("Document content must not be empty");
+    }
+
+    @Test
+    void deletesChunksByDocumentId() {
+        chunkService.deleteChunksByDocumentId(1L);
+
+        verify(chunkRepository).deleteByDocumentId(1L);
     }
 }
