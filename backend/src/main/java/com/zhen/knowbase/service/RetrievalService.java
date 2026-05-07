@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Locale;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class RetrievalService {
@@ -23,10 +24,12 @@ public class RetrievalService {
         this.chunkRepository = chunkRepository;
     }
 
+    @Transactional(readOnly = true)
     public List<RetrievedChunk> retrieve(String question) {
         return retrieve(question, DEFAULT_TOP_K);
     }
 
+    @Transactional(readOnly = true)
     public List<RetrievedChunk> retrieve(String question, int topK) {
         if (question == null || question.isBlank()) {
             throw new IllegalArgumentException("Question must not be empty");
