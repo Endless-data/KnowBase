@@ -1,7 +1,9 @@
 package com.zhen.knowbase;
 
-import com.zhen.knowbase.repository.DocumentRepository;
 import com.zhen.knowbase.repository.ChunkRepository;
+import com.zhen.knowbase.repository.ChatRecordRepository;
+import com.zhen.knowbase.repository.CitationRepository;
+import com.zhen.knowbase.repository.DocumentRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -17,6 +19,12 @@ class KnowBaseApplicationTests {
 
     @MockBean
     private ChunkRepository chunkRepository;
+
+    @MockBean
+    private ChatRecordRepository chatRecordRepository;
+
+    @MockBean
+    private CitationRepository citationRepository;
 
     @Test
     void contextLoads() {
