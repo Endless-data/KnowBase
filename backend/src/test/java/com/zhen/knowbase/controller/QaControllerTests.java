@@ -44,4 +44,15 @@ class QaControllerTests {
                 .andExpect(jsonPath("$.data.citations[0].documentName").value("README.md"))
                 .andExpect(jsonPath("$.data.citations[0].chunkIndex").value(0));
     }
+
+    @Test
+    void rejectsBlankQuestionWithUnifiedResponse() throws Exception {
+        mockMvc.perform(post("/api/qa/ask")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"question\":\" \"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(400))
+                .andExpect(jsonPath("$.message").value("Question must not be empty"))
+                .andExpect(jsonPath("$.data").doesNotExist());
+    }
 }

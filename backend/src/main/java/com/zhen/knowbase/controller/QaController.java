@@ -21,6 +21,9 @@ public class QaController {
 
     @PostMapping("/ask")
     public ApiResponse<AskResponse> ask(@RequestBody AskRequest request) {
+        if (request == null || request.question() == null || request.question().isBlank()) {
+            throw new IllegalArgumentException("Question must not be empty");
+        }
         return ApiResponse.success(qaService.ask(request.question()));
     }
 }
