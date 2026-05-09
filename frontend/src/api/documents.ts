@@ -8,13 +8,7 @@ export function listDocuments(): Promise<DocumentItem[]> {
 export function uploadDocument(file: File): Promise<DocumentUploadResult> {
   const formData = new FormData();
   formData.append('file', file);
-  return request(
-    apiClient.post('/api/documents/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    }),
-  );
+  return request(apiClient.post('/api/documents/upload', formData));
 }
 
 export function deleteDocument(id: number): Promise<void> {
