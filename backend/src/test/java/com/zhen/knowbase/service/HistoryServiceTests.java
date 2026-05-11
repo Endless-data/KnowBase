@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class HistoryServiceTests {
@@ -58,6 +59,26 @@ class HistoryServiceTests {
         when(chatRecordRepository.findById(404L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> historyService.getHistory(404L))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("History record not found");
+    }
+
+    @Test
+    void deletesHistoryAndCitations() {
+        ChatRecord chatRecord = chatRecord(1L, "KnowBase", "answer", 1);
+        when(chatRecordRepository.findById(1L)).thenReturn(Optional.of(chatRecord));
+
+        historyService.deleteHistory(1L);
+
+        verify(citationRepository).deleteByChatRecordId(1L);
+        verify(chatRecordRepository).delete(chatRecord);
+    }
+
+    @Test
+    void rejectsDeletingMissingHistoryRecord() {
+        when(chatRecordRepository.findById(404L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> historyService.deleteHistory(404L))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("History record not found");
     }

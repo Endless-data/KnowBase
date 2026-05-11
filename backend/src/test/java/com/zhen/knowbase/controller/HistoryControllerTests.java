@@ -12,7 +12,9 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -65,5 +67,15 @@ class HistoryControllerTests {
                 .andExpect(jsonPath("$.data.citations[0].chunkId").value(10))
                 .andExpect(jsonPath("$.data.citations[0].documentId").value(2))
                 .andExpect(jsonPath("$.data.citations[0].documentName").value("README.md"));
+    }
+
+    @Test
+    void deletesHistoryWithUnifiedResponse() throws Exception {
+        mockMvc.perform(delete("/api/history/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.message").value("删除成功"));
+
+        verify(historyService).deleteHistory(1L);
     }
 }

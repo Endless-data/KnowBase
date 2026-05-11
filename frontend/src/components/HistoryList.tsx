@@ -3,11 +3,13 @@ import type { HistoryListItem } from '../types/api';
 interface HistoryListProps {
   histories: HistoryListItem[];
   isLoading: boolean;
+  deletingId: number | null;
   selectedId: number | null;
+  onDelete: (history: HistoryListItem) => Promise<void>;
   onSelect: (id: number) => void;
 }
 
-function HistoryList({ histories, isLoading, selectedId, onSelect }: HistoryListProps) {
+function HistoryList({ histories, isLoading, deletingId, selectedId, onDelete, onSelect }: HistoryListProps) {
   if (isLoading) {
     return (
       <div className="rounded-[2rem] border border-white/70 bg-white/60 p-6 text-sm font-semibold text-ink/60 shadow-xl shadow-ink/10 backdrop-blur">
@@ -29,29 +31,42 @@ function HistoryList({ histories, isLoading, selectedId, onSelect }: HistoryList
     <div className="space-y-4">
       {histories.map((history) => {
         const isSelected = history.id === selectedId;
+        const isDeleting = history.id === deletingId;
 
         return (
-          <button
+          <article
             className={`w-full rounded-[1.5rem] border p-5 text-left shadow-lg shadow-ink/5 transition ${
               isSelected
                 ? 'border-ink bg-ink text-paper'
                 : 'border-ink/10 bg-white/60 text-ink hover:border-moss/40 hover:bg-white/80'
             }`}
             key={history.id}
-            onClick={() => onSelect(history.id)}
-            type="button"
           >
-            <div className="flex items-center justify-between gap-3">
-              <span className={`text-xs font-bold uppercase tracking-[0.2em] ${isSelected ? 'text-paper/70' : 'text-clay'}`}>
-                {formatDate(history.createdAt)}
-              </span>
-              <span className={`rounded-full px-3 py-1 text-xs font-bold ${isSelected ? 'bg-paper/15 text-paper' : 'bg-moss/10 text-moss'}`}>
-                {history.retrievalCount} 引用
-              </span>
-            </div>
-            <p className="mt-4 text-base font-bold leading-6">{history.question}</p>
-            <p className={`mt-3 text-sm leading-6 ${isSelected ? 'text-paper/70' : 'text-ink/60'}`}>{shorten(history.answer)}</p>
-          </button>
+            <button className="w-full text-left" onClick={() => onSelect(history.id)} type="button">
+              <div className="flex items-center justify-between gap-3">
+                <span className={`text-xs font-bold uppercase tracking-[0.2em] ${isSelected ? 'text-paper/70' : 'text-clay'}`}>
+                  {formatDate(history.createdAt)}
+                </span>
+                <span className={`rounded-full px-3 py-1 text-xs font-bold ${isSelected ? 'bg-paper/15 text-paper' : 'bg-moss/10 text-moss'}`}>
+                  {history.retrievalCount} 引用
+                </span>
+              </div>
+              <p className="mt-4 text-base font-bold leading-6">{history.question}</p>
+              <p className={`mt-3 text-sm leading-6 ${isSelected ? 'text-paper/70' : 'text-ink/60'}`}>{shorten(history.answer)}</p>
+            </button>
+            <button
+              className={`mt-4 rounded-full border px-4 py-2 text-xs font-bold transition ${
+                isSelected
+                  ? 'border-paper/25 text-paper/75 hover:bg-paper/10'
+                  : 'border-clay/25 text-clay hover:bg-clay/10'
+              } disabled:cursor-not-allowed disabled:opacity-50`}
+              disabled={isDeleting}
+              onClick={() => void onDelete(history)}
+              type="button"
+            >
+              {isDeleting ? '删除中...' : '删除记录'}
+            </button>
+          </article>
         );
       })}
     </div>

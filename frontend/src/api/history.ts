@@ -8,3 +8,7 @@ export function listHistory(): Promise<HistoryListItem[]> {
 export function getHistory(id: number): Promise<HistoryDetail> {
   return request(apiClient.get(`/api/history/${id}`));
 }
+
+export function deleteHistory(id: number): Promise<void> {
+  return request(apiClient.delete(`/api/history/${id}`));
+}

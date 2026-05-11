@@ -5,6 +5,7 @@ import com.zhen.knowbase.dto.HistoryDetailResponse;
 import com.zhen.knowbase.dto.HistoryListResponse;
 import com.zhen.knowbase.service.HistoryService;
 import java.util.List;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -28,5 +29,11 @@ public class HistoryController {
     @GetMapping("/{id}")
     public ApiResponse<HistoryDetailResponse> getHistory(@PathVariable Long id) {
         return ApiResponse.success(historyService.getHistory(id));
+    }
+
+    @DeleteMapping("/{id}")
+    public ApiResponse<Void> deleteHistory(@PathVariable Long id) {
+        historyService.deleteHistory(id);
+        return ApiResponse.success("删除成功", null);
     }
 }

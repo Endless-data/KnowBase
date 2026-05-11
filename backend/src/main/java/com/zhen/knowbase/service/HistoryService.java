@@ -41,6 +41,15 @@ public class HistoryService {
         return HistoryDetailResponse.from(chatRecord, citations);
     }
 
+    @Transactional
+    public void deleteHistory(Long id) {
+        ChatRecord chatRecord = chatRecordRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("History record not found"));
+
+        citationRepository.deleteByChatRecordId(id);
+        chatRecordRepository.delete(chatRecord);
+    }
+
     private CitationResponse toCitationResponse(Citation citation) {
         return new CitationResponse(
                 citation.getChunkId(),

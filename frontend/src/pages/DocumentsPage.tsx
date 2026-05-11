@@ -70,7 +70,7 @@ function DocumentsPage() {
               文档管理
             </h1>
             <p className="mt-4 max-w-2xl text-base leading-7 text-ink/65">
-              上传文档、查看处理状态并清理不需要的资料。问答和历史页面将在后续步骤接入。
+              上传文档、查看处理状态并清理不需要的资料。
             </p>
           </div>
           <button

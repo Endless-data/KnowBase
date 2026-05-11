@@ -10,6 +10,14 @@ KnowBase 是一个个人知识库 MVP，当前后端支持文档上传、解析�
 - MySQL 8.4
 - Docker Compose
 
+## 前端技术栈
+
+- React
+- Vite
+- TypeScript
+- Axios
+- Tailwind CSS
+
 ## 启动 MySQL
 
 项目根目录已有 `docker-compose.yml`，只配置了 MySQL：
@@ -46,6 +54,39 @@ mvn spring-boot:run
 ```
 
 服务默认运行在：
+
+```text
+http://localhost:8080
+```
+
+## 启动前端
+
+首次运行前安装依赖：
+
+```bash
+cd frontend
+npm install
+```
+
+构建检查：
+
+```bash
+npm run build
+```
+
+启动开发服务器：
+
+```bash
+npm run dev
+```
+
+前端默认运行在：
+
+```text
+http://localhost:5173
+```
+
+开发环境通过 Vite 代理访问后端接口，前端请求 `/api` 会转发到：
 
 ```text
 http://localhost:8080
@@ -122,6 +163,46 @@ curl http://localhost:8080/api/history/1
 ```bash
 curl -X DELETE http://localhost:8080/api/documents/1
 ```
+
+## 前后端完整联调
+
+1. 启动 MySQL：
+
+```bash
+docker compose up -d mysql
+docker compose ps
+```
+
+2. 启动后端：
+
+```bash
+cd backend
+mvn test
+mvn spring-boot:run
+```
+
+3. 另开终端，启动前端：
+
+```bash
+cd frontend
+npm run build
+npm run dev
+```
+
+4. 在浏览器打开：
+
+```text
+http://localhost:5173
+```
+
+5. 按页面顺序验证 MVP 主流程：
+
+- 在“文档管理”上传 `.txt` 或 `.md` 文档。
+- 确认文档列表出现新文档。
+- 进入“知识问答”，输入和文档内容相关的问题。
+- 确认页面展示回答和引用来源。
+- 进入“历史记录”，确认能看到刚才的问题、回答和引用。
+- 回到“文档管理”，删除刚才上传的测试文档。
 
 ## 常见错误提示
 

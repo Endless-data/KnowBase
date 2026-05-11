@@ -7,4 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface CitationRepository extends JpaRepository<Citation, Long> {
 
     List<Citation> findByChatRecordIdOrderByChunkIndexAsc(Long chatRecordId);
+
+    void deleteByChatRecordId(Long chatRecordId);
 }

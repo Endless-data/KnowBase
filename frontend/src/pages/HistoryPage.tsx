@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getHistory, listHistory } from '../api/history';
+import { deleteHistory, getHistory, listHistory } from '../api/history';
 import HistoryDetail from '../components/HistoryDetail';
 import HistoryList from '../components/HistoryList';
 import type { HistoryDetail as HistoryDetailType, HistoryListItem } from '../types/api';
@@ -10,6 +10,7 @@ function HistoryPage() {
   const [detail, setDetail] = useState<HistoryDetailType | null>(null);
   const [isLoadingList, setIsLoadingList] = useState(true);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
@@ -52,6 +53,28 @@ function HistoryPage() {
     }
   }
 
+  async function handleDelete(history: HistoryListItem) {
+    if (!window.confirm(`确认删除历史记录「${history.question}」吗？`)) {
+      return;
+    }
+
+    setDeletingId(history.id);
+    setErrorMessage('');
+
+    try {
+      await deleteHistory(history.id);
+      if (selectedId === history.id) {
+        setDetail(null);
+        setSelectedId(null);
+      }
+      await refreshHistory();
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   return (
     <main className="min-h-screen overflow-hidden bg-paper text-ink">
       <section className="relative mx-auto min-h-screen w-full max-w-6xl px-6 py-10 sm:px-10 lg:px-12">
@@ -81,7 +104,14 @@ function HistoryPage() {
         )}
 
         <div className="relative z-10 grid gap-8 py-10 lg:grid-cols-[0.85fr_1.45fr]">
-          <HistoryList histories={histories} isLoading={isLoadingList} onSelect={(id) => void loadDetail(id)} selectedId={selectedId} />
+          <HistoryList
+            deletingId={deletingId}
+            histories={histories}
+            isLoading={isLoadingList}
+            onDelete={handleDelete}
+            onSelect={(id) => void loadDetail(id)}
+            selectedId={selectedId}
+          />
           <HistoryDetail detail={detail} isLoading={isLoadingDetail} />
         </div>
       </section>
