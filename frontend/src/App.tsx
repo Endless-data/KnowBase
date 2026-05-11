@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import DocumentsPage from './pages/DocumentsPage';
+import HistoryPage from './pages/HistoryPage';
 import QaPage from './pages/QaPage';
 
-type ActivePage = 'documents' | 'qa';
+type ActivePage = 'documents' | 'qa' | 'history';
 
 function App() {
   const [activePage, setActivePage] = useState<ActivePage>('documents');
@@ -28,9 +29,20 @@ function App() {
         >
           知识问答
         </button>
+        <button
+          className={`rounded-full px-5 py-2 text-sm font-bold transition ${
+            activePage === 'history' ? 'bg-ink text-paper' : 'text-ink/65 hover:text-ink'
+          }`}
+          onClick={() => setActivePage('history')}
+          type="button"
+        >
+          历史记录
+        </button>
       </nav>
 
-      {activePage === 'documents' ? <DocumentsPage /> : <QaPage />}
+      {activePage === 'documents' && <DocumentsPage />}
+      {activePage === 'qa' && <QaPage />}
+      {activePage === 'history' && <HistoryPage />}
     </>
   );
 }
