@@ -9,10 +9,10 @@ public record RetrievedChunk(
         String documentName,
         Integer chunkIndex,
         String content,
-        int score
+        double score
 ) {
 
-    public static RetrievedChunk from(Chunk chunk, int score) {
+    public static RetrievedChunk from(Chunk chunk, double score) {
         Document document = chunk.getDocument();
         return new RetrievedChunk(
                 chunk.getId(),

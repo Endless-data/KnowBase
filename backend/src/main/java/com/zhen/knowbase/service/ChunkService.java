@@ -13,9 +13,17 @@ public class ChunkService {
     static final int CHUNK_SIZE = 500;
 
     private final ChunkRepository chunkRepository;
+    private final EmbeddingService embeddingService;
+    private final VectorStoreService vectorStoreService;
 
-    public ChunkService(ChunkRepository chunkRepository) {
+    public ChunkService(
+            ChunkRepository chunkRepository,
+            EmbeddingService embeddingService,
+            VectorStoreService vectorStoreService
+    ) {
         this.chunkRepository = chunkRepository;
+        this.embeddingService = embeddingService;
+        this.vectorStoreService = vectorStoreService;
     }
 
     public List<Chunk> createChunks(Document document, String content) {
@@ -23,11 +31,21 @@ public class ChunkService {
             throw new IllegalArgumentException("Document content must not be empty");
         }
 
-        List<Chunk> chunks = split(document, content);
-        return chunkRepository.saveAll(chunks);
+        List<Chunk> savedChunks = chunkRepository.saveAll(split(document, content));
+        for (Chunk chunk : savedChunks) {
+            List<Float> vector = embeddingService.embed(chunk.getContent());
+            String vectorId = vectorStoreService.saveVector(chunk.getId(), vector);
+            chunk.setVectorId(vectorId);
+        }
+        return chunkRepository.saveAll(savedChunks);
     }
 
     public void deleteChunksByDocumentId(Long documentId) {
+        List<Long> chunkIds = chunkRepository.findByDocumentId(documentId)
+                .stream()
+                .map(Chunk::getId)
+                .toList();
+        vectorStoreService.deleteVectorsByChunkIds(chunkIds);
         chunkRepository.deleteByDocumentId(documentId);
     }
 

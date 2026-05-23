@@ -70,6 +70,10 @@ public class Chunk {
         return vectorId;
     }
 
+    public void setVectorId(String vectorId) {
+        this.vectorId = vectorId;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }

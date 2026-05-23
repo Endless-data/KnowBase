@@ -8,27 +8,28 @@ import com.zhen.knowbase.repository.ChunkRepository;
 import java.lang.reflect.Field;
 import java.util.List;
 import org.junit.jupiter.api.Test;
-import org.springframework.data.domain.Pageable;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class RetrievalServiceTests {
 
     private final ChunkRepository chunkRepository = mock(ChunkRepository.class);
-    private final RetrievalService retrievalService = new RetrievalService(chunkRepository);
+    private final EmbeddingService embeddingService = mock(EmbeddingService.class);
+    private final VectorStoreService vectorStoreService = mock(VectorStoreService.class);
+    private final RetrievalService retrievalService = new RetrievalService(chunkRepository, embeddingService, vectorStoreService);
 
     @Test
-    void retrievesTopKChunksByKeywordScore() {
+    void retrievesTopKChunksByVectorSimilarity() {
         Document document = document(1L, "README.md");
         Chunk lowScore = chunk(10L, document, 0, "Spring Boot service");
         Chunk highScore = chunk(11L, document, 1, "Spring Boot backend supports Spring retrieval");
-        when(chunkRepository.findByContentContainingIgnoreCase(eq("spring"), isA(Pageable.class)))
-                .thenReturn(List.of(lowScore, highScore));
+        when(embeddingService.embed("spring backend")).thenReturn(List.of(1F, 0F));
+        when(vectorStoreService.searchSimilar(List.of(1F, 0F), 1))
+                .thenReturn(List.of(new VectorSearchResult(11L, 0.95)));
+        when(chunkRepository.findAllById(List.of(11L))).thenReturn(List.of(highScore, lowScore));
 
         List<RetrievedChunk> results = retrievalService.retrieve("spring backend", 1);
 
@@ -37,7 +38,7 @@ class RetrievalServiceTests {
         assertThat(results.get(0).documentId()).isEqualTo(1L);
         assertThat(results.get(0).documentName()).isEqualTo("README.md");
         assertThat(results.get(0).chunkIndex()).isEqualTo(1);
-        assertThat(results.get(0).score()).isEqualTo(2);
+        assertThat(results.get(0).score()).isEqualTo(0.95);
     }
 
     @Test

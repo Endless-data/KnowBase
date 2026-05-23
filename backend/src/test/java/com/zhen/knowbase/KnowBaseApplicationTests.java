@@ -10,7 +10,9 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 
 @SpringBootTest(properties = {
         "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,"
-                + "org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration"
+                + "org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration",
+        "knowbase.embedding.provider=local",
+        "knowbase.vector-store.provider=memory"
 })
 class KnowBaseApplicationTests {
 

@@ -44,7 +44,7 @@ class QaServiceTests {
                 "README.md",
                 0,
                 "KnowBase 是个人知识库系统。",
-                2
+                0.9
         );
         when(retrievalService.retrieve("KnowBase 是什么", 3)).thenReturn(List.of(chunk));
 

@@ -26,3 +26,9 @@ knowbase:
     upload-dir: ${KB_UPLOAD_DIR:../uploads}
     max-file-size: 10485760
     allowed-extensions: txt,md
+  embedding:
+    provider: ${KB_EMBEDDING_PROVIDER:dashscope}
+    model: ${KB_EMBEDDING_MODEL:text-embedding-v4}
+    dimension: ${KB_EMBEDDING_DIMENSION:1024}
+  vector-store:
+    provider: ${KB_VECTOR_STORE_PROVIDER:mysql}

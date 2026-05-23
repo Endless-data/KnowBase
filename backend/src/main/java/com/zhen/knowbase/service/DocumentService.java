@@ -6,7 +6,6 @@ import com.zhen.knowbase.entity.Document;
 import com.zhen.knowbase.entity.DocumentStatus;
 import com.zhen.knowbase.repository.DocumentRepository;
 import com.zhen.knowbase.service.FileStorageService.StoredFile;
-import java.io.UncheckedIOException;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -71,7 +70,7 @@ public class DocumentService {
             String content = parserService.parse(document.getFilePath());
             chunkService.createChunks(document, content);
             document.markIndexed();
-        } catch (IllegalArgumentException | UncheckedIOException exception) {
+        } catch (RuntimeException exception) {
             document.markFailed();
         }
     }

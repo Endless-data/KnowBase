@@ -3,11 +3,10 @@ package com.zhen.knowbase.service;
 import com.zhen.knowbase.dto.RetrievedChunk;
 import com.zhen.knowbase.entity.Chunk;
 import com.zhen.knowbase.repository.ChunkRepository;
-import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Locale;
-import org.springframework.data.domain.PageRequest;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,12 +15,19 @@ public class RetrievalService {
 
     private static final int DEFAULT_TOP_K = 5;
     private static final int MAX_TOP_K = 20;
-    private static final int CANDIDATE_MULTIPLIER = 5;
 
     private final ChunkRepository chunkRepository;
+    private final EmbeddingService embeddingService;
+    private final VectorStoreService vectorStoreService;
 
-    public RetrievalService(ChunkRepository chunkRepository) {
+    public RetrievalService(
+            ChunkRepository chunkRepository,
+            EmbeddingService embeddingService,
+            VectorStoreService vectorStoreService
+    ) {
         this.chunkRepository = chunkRepository;
+        this.embeddingService = embeddingService;
+        this.vectorStoreService = vectorStoreService;
     }
 
     @Transactional(readOnly = true)
@@ -36,21 +42,23 @@ public class RetrievalService {
         }
 
         int normalizedTopK = normalizeTopK(topK);
-        List<String> keywords = extractKeywords(question);
-        if (keywords.isEmpty()) {
+        List<VectorSearchResult> searchResults = vectorStoreService.searchSimilar(
+                embeddingService.embed(question),
+                normalizedTopK
+        );
+        if (searchResults.isEmpty()) {
             return List.of();
         }
 
-        List<Chunk> candidates = chunkRepository.findByContentContainingIgnoreCase(
-                keywords.get(0),
-                PageRequest.of(0, normalizedTopK * CANDIDATE_MULTIPLIER)
-        );
+        Map<Long, Chunk> chunksById = chunkRepository.findAllById(searchResults.stream()
+                        .map(VectorSearchResult::chunkId)
+                        .toList())
+                .stream()
+                .collect(Collectors.toMap(Chunk::getId, Function.identity()));
 
-        return candidates.stream()
-                .map(chunk -> RetrievedChunk.from(chunk, score(chunk, keywords)))
-                .filter(retrievedChunk -> retrievedChunk.score() > 0)
-                .sorted(Comparator.comparingInt(RetrievedChunk::score).reversed())
-                .limit(normalizedTopK)
+        return searchResults.stream()
+                .filter(result -> chunksById.containsKey(result.chunkId()))
+                .map(result -> RetrievedChunk.from(chunksById.get(result.chunkId()), result.score()))
                 .toList();
     }
 
@@ -59,23 +67,5 @@ public class RetrievalService {
             return DEFAULT_TOP_K;
         }
         return Math.min(topK, MAX_TOP_K);
-    }
-
-    private List<String> extractKeywords(String question) {
-        return Arrays.stream(question.trim().toLowerCase(Locale.ROOT).split("\\s+"))
-                .filter(keyword -> !keyword.isBlank())
-                .distinct()
-                .toList();
-    }
-
-    private int score(Chunk chunk, List<String> keywords) {
-        String content = chunk.getContent().toLowerCase(Locale.ROOT);
-        int score = 0;
-        for (String keyword : keywords) {
-            if (content.contains(keyword)) {
-                score++;
-            }
-        }
-        return score;
     }
 }

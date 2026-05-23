@@ -3,9 +3,11 @@ package com.zhen.knowbase.service;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 @Service
+@ConditionalOnProperty(name = "knowbase.embedding.provider", havingValue = "local")
 public class LocalEmbeddingService implements EmbeddingService {
 
     static final int VECTOR_DIMENSION = 16;

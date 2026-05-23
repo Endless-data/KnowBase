@@ -9,5 +9,7 @@ public interface ChunkRepository extends JpaRepository<Chunk, Long> {
 
     void deleteByDocumentId(Long documentId);
 
+    List<Chunk> findByDocumentId(Long documentId);
+
     List<Chunk> findByContentContainingIgnoreCase(String keyword, Pageable pageable);
 }
