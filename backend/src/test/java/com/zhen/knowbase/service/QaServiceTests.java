@@ -23,10 +23,12 @@ import static org.mockito.Mockito.when;
 class QaServiceTests {
 
     private final RetrievalService retrievalService = mock(RetrievalService.class);
+    private final LlmService llmService = mock(LlmService.class);
     private final ChatRecordRepository chatRecordRepository = mock(ChatRecordRepository.class);
     private final CitationRepository citationRepository = mock(CitationRepository.class);
     private final QaService qaService = new QaService(
             retrievalService,
+            llmService,
             chatRecordRepository,
             citationRepository
     );
@@ -37,7 +39,7 @@ class QaServiceTests {
     }
 
     @Test
-    void answersWithTemplateAndCitationsWhenChunksAreFound() {
+    void answersWithLlmAndCitationsWhenChunksAreFound() {
         RetrievedChunk chunk = new RetrievedChunk(
                 10L,
                 1L,
@@ -47,14 +49,16 @@ class QaServiceTests {
                 0.9
         );
         when(retrievalService.retrieve("KnowBase 是什么", 3)).thenReturn(List.of(chunk));
+        when(llmService.generateAnswer("KnowBase 是什么", List.of(chunk)))
+                .thenReturn("KnowBase 是一个个人知识库系统。");
 
         AskResponse response = qaService.ask("KnowBase 是什么");
 
-        assertThat(response.answer()).startsWith("根据知识库内容，相关信息如下：");
-        assertThat(response.answer()).contains("KnowBase 是个人知识库系统。");
+        assertThat(response.answer()).isEqualTo("KnowBase 是一个个人知识库系统。");
         assertThat(response.citations()).hasSize(1);
         assertThat(response.citations().get(0).chunkId()).isEqualTo(10L);
         assertThat(response.citations().get(0).documentName()).isEqualTo("README.md");
+        verify(llmService).generateAnswer("KnowBase 是什么", List.of(chunk));
 
         ArgumentCaptor<ChatRecord> chatRecordCaptor = ArgumentCaptor.forClass(ChatRecord.class);
         verify(chatRecordRepository).save(chatRecordCaptor.capture());
@@ -83,6 +87,7 @@ class QaServiceTests {
 
         assertThat(response.answer()).isEqualTo("知识库中暂无相关内容");
         assertThat(response.citations()).isEmpty();
+        verify(llmService, never()).generateAnswer(any(), anyList());
 
         ArgumentCaptor<ChatRecord> chatRecordCaptor = ArgumentCaptor.forClass(ChatRecord.class);
         verify(chatRecordRepository).save(chatRecordCaptor.capture());
@@ -98,6 +103,7 @@ class QaServiceTests {
         assertThatThrownBy(() -> qaService.ask(" "))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("Question must not be empty");
+        verify(llmService, never()).generateAnswer(any(), anyList());
         verify(chatRecordRepository, never()).save(any(ChatRecord.class));
         verify(citationRepository, never()).saveAll(anyList());
     }

@@ -1,6 +1,6 @@
 # KnowBase
 
-KnowBase 是一个个人知识库 MVP，当前后端支持文档上传、解析、文本切分、关键词检索、规则问答、引用返回、问答历史和文档删除。
+KnowBase 是一个个人知识库 MVP，当前后端支持文档上传、解析、文本切分、Embedding 向量化、语义检索、DeepSeek 问答、引用返回、问答历史和文档删除。
 
 ## 后端技术栈
 
@@ -36,14 +36,32 @@ password: knowbase
 port: 3306
 ```
 
-后端也支持通过环境变量覆盖数据库和上传目录：
+后端支持从项目根目录 `.env` 统一读取本地配置。先复制示例文件：
 
 ```bash
-export KB_DB_URL='jdbc:mysql://localhost:3306/knowbase?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai'
-export KB_DB_USERNAME='knowbase'
-export KB_DB_PASSWORD='knowbase'
-export KB_UPLOAD_DIR='../uploads'
+cp .env.example .env
 ```
+
+然后在 `.env` 中填写或调整：
+
+```text
+KB_DB_URL=jdbc:mysql://localhost:3306/knowbase?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+KB_DB_USERNAME=knowbase
+KB_DB_PASSWORD=knowbase
+KB_UPLOAD_DIR=../uploads
+KB_EMBEDDING_PROVIDER=dashscope
+KB_EMBEDDING_MODEL=text-embedding-v4
+KB_EMBEDDING_DIMENSION=1024
+DASHSCOPE_API_KEY=你的阿里云百炼 API Key
+KB_VECTOR_STORE_PROVIDER=mysql
+KB_LLM_PROVIDER=deepseek
+KB_LLM_MODEL=deepseek-v4-flash
+KB_LLM_BASE_URL=https://api.deepseek.com
+KB_LLM_MAX_TOKENS=1000
+DEEPSEEK_API_KEY=你的 DeepSeek API Key
+```
+
+`.env` 已被 `.gitignore` 忽略，不要提交真实 API Key。如果只是本地验证 MySQL 和后端启动、暂时不调用真实 Embedding，可以把 `.env` 中的 `KB_EMBEDDING_PROVIDER` 改成 `local`。如果要完整体验 DeepSeek 问答，需要填写 `DEEPSEEK_API_KEY`。
 
 ## 启动后端
 
@@ -214,6 +232,7 @@ http://localhost:5173
 
 ## 当前限制
 
-- MVP 阶段暂未接入真实大模型，问答回答由规则模板生成。
-- MVP 阶段暂未接入向量库，检索使用关键词匹配。
-- 删除文档会删除文档记录、chunk 和本地上传文件；历史引用保留当时的文本快照。
+- 当前向量存储使用 MySQL JSON 文本保存，并在 Java 中计算余弦相似度，适合课程 MVP 和小规模数据。
+- 旧文档如果是在接入向量化前上传的，需要重新上传后才能参与语义检索。
+- DeepSeek 和 DashScope API Key 只应保存在本地 `.env` 中，不要提交到 Git。
+- 删除文档会删除文档记录、chunk、向量记录和本地上传文件；历史引用保留当时的文本快照。

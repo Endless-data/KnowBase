@@ -1,6 +1,9 @@
 spring:
   application:
     name: knowbase
+  config:
+    import:
+      - optional:file:../.env[.properties]
   datasource:
     url: ${KB_DB_URL:jdbc:mysql://localhost:3306/knowbase?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai}
     username: ${KB_DB_USERNAME:knowbase}
@@ -32,3 +35,8 @@ knowbase:
     dimension: ${KB_EMBEDDING_DIMENSION:1024}
   vector-store:
     provider: ${KB_VECTOR_STORE_PROVIDER:mysql}
+  llm:
+    provider: ${KB_LLM_PROVIDER:deepseek}
+    model: ${KB_LLM_MODEL:deepseek-v4-flash}
+    base-url: ${KB_LLM_BASE_URL:https://api.deepseek.com}
+    max-tokens: ${KB_LLM_MAX_TOKENS:1000}

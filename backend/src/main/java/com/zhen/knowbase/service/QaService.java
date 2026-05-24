@@ -17,15 +17,18 @@ public class QaService {
     private static final int RETRIEVAL_TOP_K = 3;
 
     private final RetrievalService retrievalService;
+    private final LlmService llmService;
     private final ChatRecordRepository chatRecordRepository;
     private final CitationRepository citationRepository;
 
     public QaService(
             RetrievalService retrievalService,
+            LlmService llmService,
             ChatRecordRepository chatRecordRepository,
             CitationRepository citationRepository
     ) {
         this.retrievalService = retrievalService;
+        this.llmService = llmService;
         this.chatRecordRepository = chatRecordRepository;
         this.citationRepository = citationRepository;
     }
@@ -43,7 +46,7 @@ public class QaService {
             return response;
         }
 
-        String answer = buildAnswer(retrievedChunks);
+        String answer = llmService.generateAnswer(question, retrievedChunks);
         List<CitationResponse> citations = retrievedChunks.stream()
                 .map(CitationResponse::from)
                 .toList();
@@ -63,14 +66,5 @@ public class QaService {
                 .map(citation -> Citation.from(chatRecord, citation))
                 .toList();
         citationRepository.saveAll(citations);
-    }
-
-    private String buildAnswer(List<RetrievedChunk> chunks) {
-        StringBuilder answer = new StringBuilder("根据知识库内容，相关信息如下：");
-        for (RetrievedChunk chunk : chunks) {
-            answer.append("\n\n")
-                    .append(chunk.content());
-        }
-        return answer.toString();
     }
 }

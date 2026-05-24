@@ -12,7 +12,8 @@ import org.springframework.boot.test.mock.mockito.MockBean;
         "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,"
                 + "org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration",
         "knowbase.embedding.provider=local",
-        "knowbase.vector-store.provider=memory"
+        "knowbase.vector-store.provider=memory",
+        "DEEPSEEK_API_KEY=test-key"
 })
 class KnowBaseApplicationTests {
 
