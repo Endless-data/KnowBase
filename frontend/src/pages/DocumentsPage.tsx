@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import DocumentTable from '../components/DocumentTable';
 import DocumentUpload from '../components/DocumentUpload';
-import { deleteDocument, listDocuments, uploadDocument } from '../api/documents';
-import type { DocumentItem } from '../types/api';
+import { deleteDocument, deleteDocuments, listDocuments, uploadDocuments } from '../api/documents';
+import type { BatchDocumentDeleteItem, BatchDocumentUploadItem, DocumentItem } from '../types/api';
 
 function DocumentsPage() {
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
@@ -10,6 +10,9 @@ function DocumentsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [isBatchDeleting, setIsBatchDeleting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [operationMessage, setOperationMessage] = useState('');
 
   useEffect(() => {
     void refreshDocuments();
@@ -19,7 +22,12 @@ function DocumentsPage() {
     setIsLoading(true);
     setErrorMessage('');
     try {
-      setDocuments(await listDocuments());
+      const nextDocuments = await listDocuments();
+      setDocuments(nextDocuments);
+      setSelectedIds((currentSelectedIds) => {
+        const existingIds = new Set(nextDocuments.map((document) => document.id));
+        return currentSelectedIds.filter((documentId) => existingIds.has(documentId));
+      });
     } catch (error) {
       setErrorMessage(getErrorMessage(error));
     } finally {
@@ -27,11 +35,13 @@ function DocumentsPage() {
     }
   }
 
-  async function handleUpload(file: File) {
+  async function handleUpload(files: File[]) {
     setIsUploading(true);
     setErrorMessage('');
+    setOperationMessage('');
     try {
-      await uploadDocument(file);
+      const response = await uploadDocuments(files);
+      setOperationMessage(formatUploadResult(response.results));
       await refreshDocuments();
     } catch (error) {
       setErrorMessage(getErrorMessage(error));
@@ -47,14 +57,56 @@ function DocumentsPage() {
 
     setDeletingId(document.id);
     setErrorMessage('');
+    setOperationMessage('');
     try {
       await deleteDocument(document.id);
+      setOperationMessage(`已删除文档「${document.name}」`);
       await refreshDocuments();
     } catch (error) {
       setErrorMessage(getErrorMessage(error));
     } finally {
       setDeletingId(null);
     }
+  }
+
+  async function handleBatchDelete() {
+    if (selectedIds.length === 0) {
+      return;
+    }
+    if (!window.confirm(`确认删除已选的 ${selectedIds.length} 份文档吗？`)) {
+      return;
+    }
+
+    setIsBatchDeleting(true);
+    setErrorMessage('');
+    setOperationMessage('');
+    try {
+      const response = await deleteDocuments(selectedIds);
+      setOperationMessage(formatDeleteResult(response.results));
+      await refreshDocuments();
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
+    } finally {
+      setIsBatchDeleting(false);
+    }
+  }
+
+  function handleToggleSelect(documentId: number) {
+    setSelectedIds((currentSelectedIds) => {
+      if (currentSelectedIds.includes(documentId)) {
+        return currentSelectedIds.filter((selectedId) => selectedId !== documentId);
+      }
+      return [...currentSelectedIds, documentId];
+    });
+  }
+
+  function handleToggleSelectAll() {
+    setSelectedIds((currentSelectedIds) => {
+      if (documents.length > 0 && documents.every((document) => currentSelectedIds.includes(document.id))) {
+        return [];
+      }
+      return documents.map((document) => document.id);
+    });
   }
 
   return (
@@ -91,10 +143,26 @@ function DocumentsPage() {
                 <p className="text-sm font-semibold uppercase tracking-[0.25em] text-moss">Documents</p>
                 <h2 className="mt-2 font-display text-2xl font-bold">知识库文档</h2>
               </div>
-              <span className="rounded-full bg-ink px-4 py-2 text-xs font-bold text-paper">
-                {documents.length} 份文档
-              </span>
+              <div className="flex flex-wrap items-center justify-end gap-3">
+                <span className="rounded-full bg-ink px-4 py-2 text-xs font-bold text-paper">
+                  {documents.length} 份文档
+                </span>
+                <button
+                  className="rounded-full border border-clay/30 px-4 py-2 text-xs font-bold text-clay transition hover:bg-clay hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
+                  disabled={selectedIds.length === 0 || isBatchDeleting}
+                  onClick={() => void handleBatchDelete()}
+                  type="button"
+                >
+                  {isBatchDeleting ? '批量删除中...' : `批量删除 ${selectedIds.length} 项`}
+                </button>
+              </div>
             </div>
+
+            {operationMessage && (
+              <div className="mb-5 rounded-2xl border border-moss/25 bg-moss/10 px-5 py-4 text-sm font-semibold text-moss">
+                {operationMessage}
+              </div>
+            )}
 
             {errorMessage && (
               <div className="mb-5 rounded-2xl border border-clay/30 bg-clay/10 px-5 py-4 text-sm font-semibold text-clay">
@@ -107,13 +175,47 @@ function DocumentsPage() {
                 <p className="font-display text-2xl font-bold">正在加载文档...</p>
               </div>
             ) : (
-              <DocumentTable documents={documents} deletingId={deletingId} onDelete={handleDelete} />
+              <DocumentTable
+                documents={documents}
+                selectedIds={selectedIds}
+                deletingId={deletingId}
+                isBatchDeleting={isBatchDeleting}
+                onDelete={handleDelete}
+                onToggleSelect={handleToggleSelect}
+                onToggleSelectAll={handleToggleSelectAll}
+              />
             )}
           </section>
         </div>
       </section>
     </main>
   );
+}
+
+function formatUploadResult(results: BatchDocumentUploadItem[]) {
+  const successCount = results.filter((result) => result.success).length;
+  const failedResults = results.filter((result) => !result.success);
+  if (failedResults.length === 0) {
+    return `批量上传完成：成功 ${successCount} 个。`;
+  }
+  return `批量上传完成：成功 ${successCount} 个，失败 ${failedResults.length} 个：${formatFailedItems(
+    failedResults.map((result) => `${result.fileName}（${result.message}）`)
+  )}`;
+}
+
+function formatDeleteResult(results: BatchDocumentDeleteItem[]) {
+  const successCount = results.filter((result) => result.success).length;
+  const failedResults = results.filter((result) => !result.success);
+  if (failedResults.length === 0) {
+    return `批量删除完成：成功 ${successCount} 个。`;
+  }
+  return `批量删除完成：成功 ${successCount} 个，失败 ${failedResults.length} 个：${formatFailedItems(
+    failedResults.map((result) => `ID ${result.documentId}（${result.message}）`)
+  )}`;
+}
+
+function formatFailedItems(items: string[]) {
+  return items.slice(0, 3).join('、') + (items.length > 3 ? ` 等 ${items.length} 项` : '');
 }
 
 function getErrorMessage(error: unknown) {

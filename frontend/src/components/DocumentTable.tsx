@@ -2,7 +2,11 @@ import type { DocumentItem } from '../types/api';
 
 interface DocumentTableProps {
   documents: DocumentItem[];
+  selectedIds: number[];
   deletingId: number | null;
+  isBatchDeleting: boolean;
+  onToggleSelect: (documentId: number) => void;
+  onToggleSelectAll: () => void;
   onDelete: (document: DocumentItem) => Promise<void>;
 }
 
@@ -13,7 +17,15 @@ const statusStyles: Record<string, string> = {
   UPLOADED: 'bg-ink/5 text-ink/70 ring-ink/10',
 };
 
-function DocumentTable({ documents, deletingId, onDelete }: DocumentTableProps) {
+function DocumentTable({
+  documents,
+  selectedIds,
+  deletingId,
+  isBatchDeleting,
+  onToggleSelect,
+  onToggleSelectAll,
+  onDelete,
+}: DocumentTableProps) {
   if (documents.length === 0) {
     return (
       <div className="rounded-[2rem] border border-ink/10 bg-white/50 p-10 text-center shadow-lg shadow-ink/5">
@@ -23,12 +35,26 @@ function DocumentTable({ documents, deletingId, onDelete }: DocumentTableProps) 
     );
   }
 
+  const selectedIdSet = new Set(selectedIds);
+  const isAllSelected = documents.length > 0 && documents.every((document) => selectedIdSet.has(document.id));
+  const isDeleting = (documentId: number) => deletingId === documentId || isBatchDeleting;
+
   return (
     <div className="overflow-hidden rounded-[2rem] border border-ink/10 bg-white/65 shadow-xl shadow-ink/10">
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-ink/10 text-left text-sm">
           <thead className="bg-ink text-paper">
             <tr>
+              <th className="px-5 py-4 font-semibold">
+                <input
+                  aria-label="选择全部文档"
+                  checked={isAllSelected}
+                  className="h-4 w-4 rounded border-paper/40 accent-clay"
+                  disabled={isBatchDeleting}
+                  onChange={onToggleSelectAll}
+                  type="checkbox"
+                />
+              </th>
               <th className="px-5 py-4 font-semibold">文档</th>
               <th className="px-5 py-4 font-semibold">类型</th>
               <th className="px-5 py-4 font-semibold">状态</th>
@@ -39,6 +65,16 @@ function DocumentTable({ documents, deletingId, onDelete }: DocumentTableProps) 
           <tbody className="divide-y divide-ink/10">
             {documents.map((document) => (
               <tr className="bg-white/35" key={document.id}>
+                <td className="px-5 py-4">
+                  <input
+                    aria-label={`选择文档 ${document.name}`}
+                    checked={selectedIdSet.has(document.id)}
+                    className="h-4 w-4 rounded border-ink/30 accent-clay"
+                    disabled={isBatchDeleting}
+                    onChange={() => onToggleSelect(document.id)}
+                    type="checkbox"
+                  />
+                </td>
                 <td className="max-w-xs px-5 py-4 font-semibold text-ink">{document.name}</td>
                 <td className="px-5 py-4 text-ink/65">{document.fileType}</td>
                 <td className="px-5 py-4">
@@ -54,11 +90,11 @@ function DocumentTable({ documents, deletingId, onDelete }: DocumentTableProps) 
                 <td className="px-5 py-4 text-right">
                   <button
                     className="rounded-full border border-clay/30 px-4 py-2 text-xs font-bold text-clay transition hover:bg-clay hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-                    disabled={deletingId === document.id}
+                    disabled={isDeleting(document.id)}
                     onClick={() => onDelete(document)}
                     type="button"
                   >
-                    {deletingId === document.id ? '删除中...' : '删除'}
+                    {isDeleting(document.id) ? '删除中...' : '删除'}
                   </button>
                 </td>
               </tr>

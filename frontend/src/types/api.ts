@@ -18,6 +18,28 @@ export interface DocumentUploadResult {
   status: string;
 }
 
+export interface BatchDocumentUploadItem {
+  fileName: string;
+  success: boolean;
+  documentId: number | null;
+  status: string | null;
+  message: string;
+}
+
+export interface BatchDocumentUploadResponse {
+  results: BatchDocumentUploadItem[];
+}
+
+export interface BatchDocumentDeleteItem {
+  documentId: number;
+  success: boolean;
+  message: string;
+}
+
+export interface BatchDocumentDeleteResponse {
+  results: BatchDocumentDeleteItem[];
+}
+
 export interface AskRequest {
   question: string;
 }
