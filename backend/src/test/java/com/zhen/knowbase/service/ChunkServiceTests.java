@@ -11,6 +11,8 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -20,14 +22,18 @@ class ChunkServiceTests {
     private final ChunkRepository chunkRepository = mock(ChunkRepository.class);
     private final EmbeddingService embeddingService = mock(EmbeddingService.class);
     private final VectorStoreService vectorStoreService = mock(VectorStoreService.class);
-    private final ChunkService chunkService = new ChunkService(chunkRepository, embeddingService, vectorStoreService);
+    private final ChunkService chunkService = new ChunkService(
+            chunkRepository,
+            embeddingService,
+            vectorStoreService,
+            ChunkService.DEFAULT_CHUNK_SIZE,
+            ChunkService.DEFAULT_CHUNK_OVERLAP
+    );
 
     @Test
-    void splitsContentByFixedLengthAndSavesChunksWithVectors() {
+    void createsSingleChunkForShortContentAndSavesVector() {
         Document document = new Document("note.md", "md", "/tmp/note.md", DocumentStatus.PARSING, 1001L);
-        String content = "a".repeat(ChunkService.CHUNK_SIZE)
-                + "b".repeat(ChunkService.CHUNK_SIZE)
-                + "c";
+        String content = "第一段内容。\n\n第二段内容。";
         when(chunkRepository.saveAll(anyList())).thenAnswer(invocation -> {
             List<Chunk> chunks = invocation.getArgument(0);
             for (int index = 0; index < chunks.size(); index++) {
@@ -37,24 +43,56 @@ class ChunkServiceTests {
             }
             return chunks;
         });
-        when(embeddingService.embed("a".repeat(ChunkService.CHUNK_SIZE))).thenReturn(List.of(1F, 0F));
-        when(embeddingService.embed("b".repeat(ChunkService.CHUNK_SIZE))).thenReturn(List.of(0F, 1F));
-        when(embeddingService.embed("c")).thenReturn(List.of(0.5F, 0.5F));
-        when(vectorStoreService.saveVector(10L, List.of(1F, 0F))).thenReturn("mysql-vector-10");
-        when(vectorStoreService.saveVector(11L, List.of(0F, 1F))).thenReturn("mysql-vector-11");
-        when(vectorStoreService.saveVector(12L, List.of(0.5F, 0.5F))).thenReturn("mysql-vector-12");
+        when(embeddingService.embed(anyString())).thenReturn(List.of(1F, 0F));
+        when(vectorStoreService.saveVector(anyLong(), anyList())).thenAnswer(invocation -> "mysql-vector-" + invocation.getArgument(0));
 
         List<Chunk> chunks = chunkService.createChunks(document, content);
 
-        assertThat(chunks).hasSize(3);
+        assertThat(chunks).hasSize(1);
         assertThat(chunks.get(0).getChunkIndex()).isZero();
-        assertThat(chunks.get(0).getContent()).hasSize(ChunkService.CHUNK_SIZE);
-        assertThat(chunks.get(1).getChunkIndex()).isEqualTo(1);
-        assertThat(chunks.get(1).getContent()).hasSize(ChunkService.CHUNK_SIZE);
-        assertThat(chunks.get(2).getChunkIndex()).isEqualTo(2);
-        assertThat(chunks.get(2).getContent()).isEqualTo("c");
+        assertThat(chunks.get(0).getContent()).isEqualTo(content);
         assertThat(chunks).extracting(Chunk::getVectorId)
-                .containsExactly("mysql-vector-10", "mysql-vector-11", "mysql-vector-12");
+                .containsExactly("mysql-vector-10");
+    }
+
+    @Test
+    void prefersSentenceBoundariesAndAddsOverlap() {
+        ChunkService smallChunkService = new ChunkService(chunkRepository, embeddingService, vectorStoreService, 28, 12);
+        Document document = new Document("note.md", "md", "/tmp/note.md", DocumentStatus.PARSING, 1001L);
+        String content = "第一句话说明项目背景。第二句话说明主要目标。第三句话说明实现方式。";
+        when(chunkRepository.saveAll(anyList())).thenAnswer(invocation -> {
+            List<Chunk> chunks = invocation.getArgument(0);
+            for (int index = 0; index < chunks.size(); index++) {
+                if (chunks.get(index).getId() == null) {
+                    setId(chunks.get(index), 20L + index);
+                }
+            }
+            return chunks;
+        });
+        when(embeddingService.embed(anyString())).thenReturn(List.of(1F, 0F));
+        when(vectorStoreService.saveVector(anyLong(), anyList())).thenAnswer(invocation -> "mysql-vector-" + invocation.getArgument(0));
+
+        List<Chunk> chunks = smallChunkService.createChunks(document, content);
+
+        assertThat(chunks).hasSize(2);
+        assertThat(chunks.get(0).getContent()).endsWith("主要目标。");
+        assertThat(chunks.get(1).getContent()).startsWith("第二句话说明主要目标。");
+        assertThat(chunks).extracting(Chunk::getChunkIndex).containsExactly(0, 1);
+    }
+
+    @Test
+    void hardSplitsLongTextWithoutSentenceBoundaries() {
+        ChunkService smallChunkService = new ChunkService(chunkRepository, embeddingService, vectorStoreService, 10, 0);
+        Document document = new Document("note.md", "md", "/tmp/note.md", DocumentStatus.PARSING, 1001L);
+        String content = "a".repeat(25);
+        when(chunkRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(embeddingService.embed(anyString())).thenReturn(List.of(1F, 0F));
+        when(vectorStoreService.saveVector(anyLong(), anyList())).thenReturn("mysql-vector-null");
+
+        List<Chunk> chunks = smallChunkService.createChunks(document, content);
+
+        assertThat(chunks).extracting(Chunk::getContent)
+                .containsExactly("a".repeat(10), "a".repeat(10), "a".repeat(5));
     }
 
     @Test

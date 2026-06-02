@@ -49,6 +49,8 @@ KB_DB_URL=jdbc:mysql://localhost:3306/knowbase?useUnicode=true&characterEncoding
 KB_DB_USERNAME=knowbase
 KB_DB_PASSWORD=knowbase
 KB_UPLOAD_DIR=../uploads
+KB_CHUNK_SIZE=800
+KB_CHUNK_OVERLAP=120
 KB_EMBEDDING_PROVIDER=dashscope
 KB_EMBEDDING_MODEL=text-embedding-v4
 KB_EMBEDDING_DIMENSION=1024
@@ -62,6 +64,8 @@ DEEPSEEK_API_KEY=你的 DeepSeek API Key
 ```
 
 `.env` 已被 `.gitignore` 忽略，不要提交真实 API Key。如果只是本地验证 MySQL 和后端启动、暂时不调用真实 Embedding，可以把 `.env` 中的 `KB_EMBEDDING_PROVIDER` 改成 `local`。如果要完整体验 DeepSeek 问答，需要填写 `DEEPSEEK_API_KEY`。
+
+`KB_CHUNK_SIZE` 控制单个文本切片的最大字符数，`KB_CHUNK_OVERLAP` 控制相邻切片保留的重叠字符数。默认分块策略会优先按段落和句子边界切分，超长文本才按固定长度兜底切分。
 
 ## 启动后端
 
@@ -233,6 +237,6 @@ http://localhost:5173
 ## 当前限制
 
 - 当前向量存储使用 MySQL JSON 文本保存，并在 Java 中计算余弦相似度，适合课程 MVP 和小规模数据。
-- 旧文档如果是在接入向量化前上传的，需要重新上传后才能参与语义检索。
+- 旧文档如果是在接入向量化或调整分块策略前上传的，需要重新上传后才能使用新的检索和切片效果。
 - DeepSeek 和 DashScope API Key 只应保存在本地 `.env` 中，不要提交到 Git。
 - 删除文档会删除文档记录、chunk、向量记录和本地上传文件；历史引用保留当时的文本快照。

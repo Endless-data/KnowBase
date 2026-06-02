@@ -7,12 +7,16 @@ import com.zhen.knowbase.entity.DocumentStatus;
 import com.zhen.knowbase.repository.DocumentRepository;
 import com.zhen.knowbase.service.FileStorageService.StoredFile;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class DocumentService {
+
+    private static final Logger logger = LoggerFactory.getLogger(DocumentService.class);
 
     private final DocumentRepository documentRepository;
     private final FileStorageService fileStorageService;
@@ -71,6 +75,13 @@ public class DocumentService {
             chunkService.createChunks(document, content);
             document.markIndexed();
         } catch (RuntimeException exception) {
+            logger.warn(
+                    "Failed to parse and index document id={}, name={}: {}",
+                    document.getId(),
+                    document.getName(),
+                    exception.getMessage(),
+                    exception
+            );
             document.markFailed();
         }
     }
