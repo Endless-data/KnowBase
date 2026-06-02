@@ -48,7 +48,7 @@ class QaServiceTests {
                 "KnowBase 是个人知识库系统。",
                 0.9
         );
-        when(retrievalService.retrieve("KnowBase 是什么", 3)).thenReturn(List.of(chunk));
+        when(retrievalService.retrieve("KnowBase 是什么", 5)).thenReturn(List.of(chunk));
         when(llmService.generateAnswer("KnowBase 是什么", List.of(chunk)))
                 .thenReturn("KnowBase 是一个个人知识库系统。");
 
@@ -81,7 +81,7 @@ class QaServiceTests {
 
     @Test
     void answersNoRelatedContentWhenNoChunksAreFound() {
-        when(retrievalService.retrieve("不存在的问题", 3)).thenReturn(List.of());
+        when(retrievalService.retrieve("不存在的问题", 5)).thenReturn(List.of());
 
         AskResponse response = qaService.ask("不存在的问题");
 

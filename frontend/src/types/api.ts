@@ -57,6 +57,25 @@ export interface AskResponse {
   citations: Citation[];
 }
 
+export type QaStreamEvent =
+  | {
+      type: 'citations';
+      citations: Citation[];
+    }
+  | {
+      type: 'answer_delta';
+      delta: string;
+    }
+  | {
+      type: 'done';
+      answer: string;
+      citations: Citation[];
+    }
+  | {
+      type: 'error';
+      message: string;
+    };
+
 export interface HistoryListItem {
   id: number;
   question: string;

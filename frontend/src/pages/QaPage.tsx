@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { askQuestion } from '../api/qa';
+import { askQuestionStream } from '../api/qa';
 import AnswerPanel from '../components/AnswerPanel';
 import QuestionInput from '../components/QuestionInput';
 import type { AskResponse } from '../types/api';
@@ -12,11 +12,45 @@ function QaPage() {
   async function handleAsk(question: string) {
     setIsAsking(true);
     setErrorMessage('');
+    setAnswer({ answer: '', citations: [] });
     try {
-      setAnswer(await askQuestion(question));
+      await askQuestionStream(question, {
+        onError: (message) => {
+          setErrorMessage(message);
+          setIsAsking(false);
+        },
+        onEvent: (event) => {
+          if (event.type === 'citations') {
+            setAnswer((currentAnswer) => ({
+              answer: currentAnswer?.answer ?? '',
+              citations: event.citations,
+            }));
+            return;
+          }
+          if (event.type === 'answer_delta') {
+            setAnswer((currentAnswer) => ({
+              answer: `${currentAnswer?.answer ?? ''}${event.delta}`,
+              citations: currentAnswer?.citations ?? [],
+            }));
+            return;
+          }
+          if (event.type === 'done') {
+            setAnswer({
+              answer: event.answer,
+              citations: event.citations,
+            });
+            setIsAsking(false);
+            return;
+          }
+          if (event.type === 'error') {
+            setErrorMessage(event.message);
+            setIsAsking(false);
+          }
+        },
+      });
+      setIsAsking(false);
     } catch (error) {
       setErrorMessage(getErrorMessage(error));
-    } finally {
       setIsAsking(false);
     }
   }
@@ -46,7 +80,7 @@ function QaPage() {
               </div>
             )}
           </div>
-          <AnswerPanel response={answer} />
+          <AnswerPanel isStreaming={isAsking} response={answer} />
         </div>
       </section>
     </main>

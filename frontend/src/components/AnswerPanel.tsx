@@ -3,9 +3,10 @@ import type { AskResponse } from '../types/api';
 
 interface AnswerPanelProps {
   response: AskResponse | null;
+  isStreaming?: boolean;
 }
 
-function AnswerPanel({ response }: AnswerPanelProps) {
+function AnswerPanel({ response, isStreaming = false }: AnswerPanelProps) {
   if (!response) {
     return (
       <section className="rounded-[2rem] border border-ink/10 bg-white/50 p-10 shadow-lg shadow-ink/5">
@@ -20,8 +21,15 @@ function AnswerPanel({ response }: AnswerPanelProps) {
   return (
     <section className="space-y-6">
       <div className="rounded-[2rem] border border-ink/10 bg-white/65 p-6 shadow-xl shadow-ink/10">
-        <p className="text-sm font-semibold uppercase tracking-[0.25em] text-moss">Answer</p>
-        <p className="mt-5 whitespace-pre-wrap text-base leading-8 text-ink/80">{response.answer}</p>
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-sm font-semibold uppercase tracking-[0.25em] text-moss">Answer</p>
+          {isStreaming && (
+            <span className="rounded-full bg-moss/10 px-3 py-1 text-xs font-bold text-moss">正在生成...</span>
+          )}
+        </div>
+        <p className="mt-5 whitespace-pre-wrap text-base leading-8 text-ink/80">
+          {response.answer || (isStreaming ? '正在读取知识库并生成回答...' : '')}
+        </p>
       </div>
 
       <div>

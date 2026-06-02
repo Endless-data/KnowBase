@@ -55,4 +55,15 @@ class QaControllerTests {
                 .andExpect(jsonPath("$.message").value("Question must not be empty"))
                 .andExpect(jsonPath("$.data").doesNotExist());
     }
+
+    @Test
+    void rejectsBlankStreamQuestionWithUnifiedResponse() throws Exception {
+        mockMvc.perform(post("/api/qa/ask/stream")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"question\":\" \"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(400))
+                .andExpect(jsonPath("$.message").value("Question must not be empty"))
+                .andExpect(jsonPath("$.data").doesNotExist());
+    }
 }

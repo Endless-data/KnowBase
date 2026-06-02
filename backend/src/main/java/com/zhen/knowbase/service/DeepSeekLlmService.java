@@ -11,6 +11,8 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
+import java.util.stream.Stream;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -82,6 +84,37 @@ public class DeepSeekLlmService implements LlmService {
         }
     }
 
+    @Override
+    public void streamAnswer(String question, List<RetrievedChunk> contexts, Consumer<String> onDelta) {
+        if (question == null || question.isBlank()) {
+            throw new IllegalArgumentException("Question must not be empty");
+        }
+        if (contexts == null || contexts.isEmpty()) {
+            throw new IllegalArgumentException("Contexts must not be empty");
+        }
+        if (onDelta == null) {
+            throw new IllegalArgumentException("Delta callback must not be null");
+        }
+        if (apiKey == null || apiKey.isBlank()) {
+            throw new IllegalStateException("DEEPSEEK_API_KEY must be configured");
+        }
+
+        try {
+            HttpResponse<Stream<String>> response = httpClient.send(buildStreamRequest(question, contexts), HttpResponse.BodyHandlers.ofLines());
+            if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                throw new IllegalStateException("DeepSeek chat completion stream request failed with status " + response.statusCode());
+            }
+            try (Stream<String> lines = response.body()) {
+                lines.forEach(line -> handleStreamLine(line, onDelta));
+            }
+        } catch (IOException exception) {
+            throw new IllegalStateException("Failed to call DeepSeek chat completion stream API", exception);
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("DeepSeek chat completion stream request was interrupted", exception);
+        }
+    }
+
     private HttpRequest buildRequest(String question, List<RetrievedChunk> contexts) throws IOException {
         String body = objectMapper.writeValueAsString(new DeepSeekChatRequest(
                 model,
@@ -90,7 +123,28 @@ public class DeepSeekLlmService implements LlmService {
                         new DeepSeekMessage("user", userPrompt(question, contexts))
                 ),
                 maxTokens,
-                new DeepSeekThinking("disabled")
+                new DeepSeekThinking("disabled"),
+                false
+        ));
+
+        return HttpRequest.newBuilder()
+                .uri(URI.create(normalizeBaseUrl(baseUrl) + CHAT_COMPLETIONS_PATH))
+                .header("Authorization", "Bearer " + apiKey)
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(body))
+                .build();
+    }
+
+    private HttpRequest buildStreamRequest(String question, List<RetrievedChunk> contexts) throws IOException {
+        String body = objectMapper.writeValueAsString(new DeepSeekChatRequest(
+                model,
+                List.of(
+                        new DeepSeekMessage("system", systemPrompt()),
+                        new DeepSeekMessage("user", userPrompt(question, contexts))
+                ),
+                maxTokens,
+                new DeepSeekThinking("disabled"),
+                true
         ));
 
         return HttpRequest.newBuilder()
@@ -113,11 +167,39 @@ public class DeepSeekLlmService implements LlmService {
         return contentNode.asText().trim();
     }
 
+    private void handleStreamLine(String line, Consumer<String> onDelta) {
+        if (line == null || line.isBlank() || line.startsWith(":")) {
+            return;
+        }
+        if (!line.startsWith("data:")) {
+            return;
+        }
+
+        String data = line.substring("data:".length()).trim();
+        if ("[DONE]".equals(data)) {
+            return;
+        }
+
+        try {
+            JsonNode contentNode = objectMapper.readTree(data)
+                    .path("choices")
+                    .path(0)
+                    .path("delta")
+                    .path("content");
+            if (contentNode.isTextual() && !contentNode.asText().isEmpty()) {
+                onDelta.accept(contentNode.asText());
+            }
+        } catch (IOException exception) {
+            throw new IllegalStateException("Failed to parse DeepSeek stream response", exception);
+        }
+    }
+
     private String systemPrompt() {
         return """
-                你是 KnowBase 的知识库问答助手。你必须只根据用户提供的知识库片段回答。
-                如果知识库片段不足以回答问题，请直接说明知识库中没有足够信息。
-                回答使用中文，简洁、直接，不要编造知识库片段之外的事实。
+                你是 KnowBase 的知识库问答助手。你必须只根据用户提供的知识库片段回答，不能编造知识库片段之外的事实。
+                回答使用中文，结构要清晰。优先先给出结论，再分点展开说明。
+                如果多个知识库片段都与问题相关，要综合归纳，不要只复述其中一个片段。
+                如果知识库片段不足以回答问题，请明确说明缺少哪些信息。
                 """;
     }
 
@@ -137,7 +219,14 @@ public class DeepSeekLlmService implements LlmService {
                     .append(chunk.content())
                     .append("\n\n");
         }
-        prompt.append("请基于以上片段回答用户问题。");
+        prompt.append("""
+                请基于以上片段完整回答用户问题。回答要求：
+                1. 先给出简短结论；
+                2. 再分点展开说明；
+                3. 如果多个片段相关，要综合归纳；
+                4. 可以在要点中说明依据来自哪些片段编号；
+                5. 不要使用知识库片段之外的信息。
+                """);
         return prompt.toString();
     }
 
@@ -149,10 +238,11 @@ public class DeepSeekLlmService implements LlmService {
     }
 
     private record DeepSeekChatRequest(
-            String model,
-            List<DeepSeekMessage> messages,
-            @JsonProperty("max_tokens") int maxTokens,
-            DeepSeekThinking thinking
+        String model,
+        List<DeepSeekMessage> messages,
+        @JsonProperty("max_tokens") int maxTokens,
+        DeepSeekThinking thinking,
+        boolean stream
     ) {
     }
 
